@@ -1,16 +1,40 @@
+# .circleci/config.yml
 version: 2
 jobs:
-  hello_world:
-    working_directory: ~/repo 
+  train_and_test:
+    # ... same as previous code snippet
+  deploy_staging:
     docker:
-      - image: google/cloud-sdk
+      - image: circleci/python:3.6.1
     steps:
+      - attach_workspace:
+          at: .
       - run:
-          name: hello ai.sg
-          command: echo "hello ai singapore"
+          name: deploy app to staging
+          command: bin/deploy_to_heroku.sh ci-workshop-app-bob-staging
+  deploy_prod:
+    docker:
+      - image: circleci/python:3.6.1
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: deploy app to prod
+          command: bin/deploy_to_heroku.sh ci-workshop-app-bob-prod
+
 
 workflows:
   version: 2
   my_ci_pipeline:
     jobs:
-      - hello_world
+      - train_and_test
+      - deploy_staging:
+          requires:
+            - train_and_test
+      - trigger_deploy:
+          type: approval
+          requires:
+            - deploy_staging
+      - deploy_prod:
+          requires:
+            - trigger_deploy
